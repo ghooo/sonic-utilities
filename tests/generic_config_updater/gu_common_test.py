@@ -496,7 +496,7 @@ class TestPathAddressing(unittest.TestCase):
         ]
 
         # Act
-        actual = self.path_addressing.find_ref_paths(path, Files.CROPPED_CONFIG_DB_AS_JSON)
+        actual = self.path_addressing.find_ref_paths(path, Files.CROPPED_CONFIG_DB_AS_JSON, True)
 
         # Assert
         self.assertCountEqual(expected, actual)

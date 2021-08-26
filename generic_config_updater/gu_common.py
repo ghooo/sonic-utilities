@@ -311,7 +311,7 @@ class PathAddressing:
 
         return f"{PathAddressing.XPATH_SEPARATOR}{PathAddressing.XPATH_SEPARATOR.join(str(t) for t in tokens)}"
 
-    def find_ref_paths(self, path, config):
+    def find_ref_paths(self, path, config, verbose=False):
         """
         Finds the paths referencing any line under the given 'path' within the given 'config'.
         Example:
@@ -349,26 +349,58 @@ class PathAddressing:
             /ACL_TABLE/EVERFLOW6/ports/1
         """
         # TODO: Also fetch references by must statement (check similar statements)
-        return self._find_leafref_paths(path, config)
+        return self._find_leafref_paths(path, config, verbose)
 
-    def _find_leafref_paths(self, path, config):
+    def li_str(self, li):
+        s = "\n"
+        for item in li:
+            s = s + "    " + str(item) + "\n"
+        return s
+
+    def file_content(self, file_path):
+        s="<FileStart>\n"
+        with open(file_path) as fh:
+            s = s+fh.read()
+        s = s+"\n</FileEnd>"
+        return s
+    def _find_leafref_paths(self, path, config, verbose=False):
+        if verbose:
+            print("path: " + path)
+            print()
+            print("config: " + json.dumps(config))
+            print()
+            print("sonic-acl.yang: " + self.file_content(YANG_DIR + "/sonic-acl.yang"))
+            print("sonic-port.yang: " + self.file_content(YANG_DIR + "/sonic-port.yang"))
+            print()
         sy = sonic_yang.SonicYang(YANG_DIR)
         sy.loadYangModel()
 
         sy.loadData(config)
 
         xpath = self.convert_path_to_xpath(path, config, sy)
+        if verbose:
+            print("xpath: " + xpath)
+            print()
 
         leaf_xpaths = self._get_inner_leaf_xpaths(xpath, sy)
 
         ref_xpaths = []
+        leaf_xpaths_strs=[]
         for xpath in leaf_xpaths:
-            ref_xpaths.extend(sy.find_data_dependencies(xpath))
+            deps=sy.find_data_dependencies(xpath)
+            ref_xpaths.extend(deps)
+            if verbose:
+                print(f"leaf_xpath={xpath} has deps: {self.li_str(deps)}", end='')
+        if verbose:
+            print()
 
         ref_paths = []
         for ref_xpath in ref_xpaths:
             ref_path = self.convert_xpath_to_path(ref_xpath, config, sy)
             ref_paths.append(ref_path)
+        if verbose:
+            print("ref_paths: " + self.li_str(ref_paths))
+            print()
 
         return set(ref_paths)
 
